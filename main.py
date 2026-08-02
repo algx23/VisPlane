@@ -98,34 +98,33 @@ def make_opensky_query(min_lat, min_long, max_lat, max_long):
 
     return response
 
+def convert_lat_long_to_screen_coordinates(long, lat, screen_y, screen_x):
+    # long => -180 to 180
+    # lat => -90 to 90
+    normalized_long = ((long - -180) / (180 - -180)) * (screen_x) + 0
+    normalized_lat = ((lat - -90) / (90 - -90)) * (screen_y) + 0
+
+    return (normalized_long, normalized_lat)
+
+
 def display_flights(flight_info_json, width, height, center):
     print(width, height)
     print(center)
     # 1920x1080 resolution
-    # 50km
-
-
+    # 50km bounding box
     stdscr = curses.initscr()
     screen_y, screen_x = stdscr.getmaxyx()
     print(f"Max Possible: {screen_x, screen_y}")
 
-    # TODO: Change this to normalize to max yx not screen res
-    # screen_normalized_lat logic not checked
-    # norm = ((val - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+    center_long, center_lat = convert_lat_long_to_screen_coordinates(center[0], center[1], screen_y, screen_x)
 
-    # long => -180 to 180
-    # lat => -90 to 90
-    normalized_long = ((center[0] - -180) / (180 - -180)) * (screen_x) + 0
-    normalized_lat = ((center[1] - -90) / (90 - -90)) * (screen_y) + 0
-    print(f"Normalized: {normalized_long, normalized_lat}")
+    print(f"Normalized: {center_long, center_lat}")
     while True:
     
-        #stdscr.addch(12, 50, "o")
         stdscr.refresh()
-        # TODO: Normalize 
-        print(f"On Screen {int(normalized_long), int(normalized_lat)}")
-        stdscr.addch(int(normalized_lat), int(normalized_long), "o")
-        if stdscr.getch() == ord("q"):
+        print(f"On Screen {int(center_long), int(center_lat)}")
+        stdscr.addch(int(center_lat), int(center_long), "o")
+        if stdscr.getch() == ord("q"): # press q to exit
             break
 
     
