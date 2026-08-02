@@ -24,18 +24,18 @@ def main():
     user32 = ctypes.windll.user32
     user32.SetProcessDPIAware()
     screen_width, screen_height = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-    display_flights(response.json, screen_width, screen_height, (lat, long))
+    display_flights(response.json, screen_width, screen_height, (long, lat))
     return
 
 
 def get_coordinates_of_place(location: str):
 
-    lat, long = 0, 0
+    long, lat = 0, 0
     locator = Nominatim(user_agent="VisPlane")
     geocoded_location = locator.geocode(location)
     lat, long = geocoded_location.latitude, geocoded_location.longitude
 
-    return (lat, long)
+    return (long, lat)
 
 def calculate_bounding_box(lat: float, long: float):
     """
@@ -106,23 +106,27 @@ def display_flights(flight_info_json, width, height, center):
 
 
     stdscr = curses.initscr()
-    screen_x, screen_y = stdscr.getmaxyx()
+    screen_y, screen_x = stdscr.getmaxyx()
+    print(f"Max Possible: {screen_x, screen_y}")
 
     # TODO: Change this to normalize to max yx not screen res
-    screen_normalized_lat = ((center[0] - -90) / (90 - -90)) * 1080
-    screen_normalized_long = ((center[1] - -180) / (180 - -180)) * 1080
-    print(screen_normalized_lat, screen_normalized_long)
-    # TODO: FIX THIS
+    # screen_normalized_lat logic not checked
+    # norm = ((val - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+
+    # long => -180 to 180
+    # lat => -90 to 90
+    normalized_long = ((center[0] - -180) / (180 - -180)) * (screen_x) + 0
+    normalized_lat = ((center[1] - -90) / (90 - -90)) * (screen_y) + 0
+    print(f"Normalized: {normalized_long, normalized_lat}")
     while True:
     
-        stdscr.addch(12, 50, "o")
+        #stdscr.addch(12, 50, "o")
         stdscr.refresh()
-        stdscr.getch()
         # TODO: Normalize 
-        # stdscr.addch(int(screen_normalized_lat), int(screen_normalized_long), "o")
-        if stdscr.getch() == "q":
-            exit(1)
-        
+        print(f"On Screen {int(normalized_long), int(normalized_lat)}")
+        stdscr.addch(int(normalized_lat), int(normalized_long), "o")
+        if stdscr.getch() == ord("q"):
+            break
 
     
     curses.endwin()
