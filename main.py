@@ -16,8 +16,8 @@ def main():
     load_dotenv()
 
     location = input("Enter the location you want to use visplane for: ")
-    lat, long = get_coordinates_of_place(location)
-    min_lat, min_long, max_lat, max_long = calculate_bounding_box(lat, long)
+    long, lat = get_coordinates_of_place(location)
+    min_lat, min_long, max_lat, max_long = calculate_bounding_box(long, lat)
 
     response = make_opensky_query(min_lat, min_long, max_lat, max_long)
 
@@ -34,10 +34,9 @@ def get_coordinates_of_place(location: str):
     locator = Nominatim(user_agent="VisPlane")
     geocoded_location = locator.geocode(location)
     lat, long = geocoded_location.latitude, geocoded_location.longitude
-
     return (long, lat)
 
-def calculate_bounding_box(lat: float, long: float):
+def calculate_bounding_box(long: float, lat: float):
     """
     Calculates a bounding box based on the location latitude and
     longitude, with a radius of 50km
@@ -129,6 +128,30 @@ def display_flights(flight_info_json, width, height, center):
 
     
     curses.endwin()
+
+    # TODO: DISPLAY OTHER FLIGHTS
+
+    # json structure
+    # icao24
+    # callsign
+    # origin country
+    # time_position
+    # last_contact
+    # longitude
+    # latitude
+    # geo_altitude
+    # on_ground
+    # velocity
+    # true_track
+    # vertical_rate
+    # sensors
+    # baro_alt
+    # squak
+    # spi
+    # pos_src
+    # category
+    
+    
     return
 
 
