@@ -6,7 +6,7 @@ import math
 import json
 import ctypes
 import curses
-
+from Flight import Flight
 
 def main():
     # opensky url
@@ -118,6 +118,9 @@ def display_flights(flight_info_json, width, height, center):
     center_long, center_lat = convert_lat_long_to_screen_coordinates(center[0], center[1], screen_y, screen_x)
 
     print(f"Normalized: {center_long, center_lat}")
+    load_flight_object("nearby_flights.json")
+    exit(0) # TEMP FOR DEBUG
+    
     while True:
     
         stdscr.refresh()
@@ -128,32 +131,14 @@ def display_flights(flight_info_json, width, height, center):
 
     
     curses.endwin()
-
-    # TODO: DISPLAY OTHER FLIGHTS
-
-    # json structure
-    # icao24
-    # callsign
-    # origin country
-    # time_position
-    # last_contact
-    # longitude
-    # latitude
-    # geo_altitude
-    # on_ground
-    # velocity
-    # true_track
-    # vertical_rate
-    # sensors
-    # baro_alt
-    # squak
-    # spi
-    # pos_src
-    # category
-    
     
     return
 
+def load_flight_object(flight_json):
+    with open("nearby flights.json") as flight_file:
+        data = json.load(flight_file)
+        flights = data["states"]
+    return
 
 if __name__ == "__main__":
     main()
