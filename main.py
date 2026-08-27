@@ -25,15 +25,28 @@ def main():
     user32.SetProcessDPIAware()
     screen_width, screen_height = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
     display_flights(response.json, screen_width, screen_height, (long, lat))
+
     return
 
 
 def get_coordinates_of_place(location: str):
+    """
+    Retrieve the latitude and longitude of a place
+
+    Arguments:
+       - location str: the name of the city to use as the central point
+         from which to start the visualization
+    
+    Returns
+        - (longitude, latitude) (float, float): - a tuple of the longitude,
+          and latitude of the place
+    """
 
     long, lat = 0, 0
     locator = Nominatim(user_agent="VisPlane")
     geocoded_location = locator.geocode(location)
     lat, long = geocoded_location.latitude, geocoded_location.longitude
+
     return (long, lat)
 
 def calculate_bounding_box(long: float, lat: float):
@@ -91,7 +104,6 @@ def make_opensky_query(min_lat, min_long, max_lat, max_long):
     print(request_url)
     if response.status_code != 200:
         print("Something Went Wrong with the request")
-        exit(1)
 
     save_flight_data(response)
 
@@ -101,8 +113,9 @@ def convert_lat_long_to_screen_coordinates(long, lat, screen_y, screen_x):
     # long => -180 to 180
     # lat => -90 to 90
     normalized_long = ((long - -180) / (180 - -180)) * (screen_x) + 0
+    print(long, normalized_long)
     normalized_lat = ((lat - -90) / (90 - -90)) * (screen_y) + 0
-
+    print(lat, normalized_lat)
     return (normalized_long, normalized_lat)
 
 
@@ -118,14 +131,22 @@ def display_flights(flight_info_json, width, height, center):
     center_long, center_lat = convert_lat_long_to_screen_coordinates(center[0], center[1], screen_y, screen_x)
 
     print(f"Normalized: {center_long, center_lat}")
-    load_flight_object("nearby_flights.json")
-    exit(0) # TEMP FOR DEBUG
+    flight_list = load_flight_object("nearby flights.json")
     
+    co_ords = dict()
+    for flight in flight_list:
+
+        co_ords[flight.icao] = convert_lat_long_to_screen_coordinates(flight.longitude, flight.latitude, screen_y, screen_x)
+        print(co_ords)
+
     while True:
     
-        stdscr.refresh()
-        print(f"On Screen {int(center_long), int(center_lat)}")
+        stdscr.clear()
+
         stdscr.addch(int(center_lat), int(center_long), "o")
+
+        for key in co_ords.keys():
+            stdscr.addch(int(co_ords[key][1]), int(co_ords[key][0]), "x") 
         if stdscr.getch() == ord("q"): # press q to exit
             break
 
@@ -135,11 +156,48 @@ def display_flights(flight_info_json, width, height, center):
     return
 
 def load_flight_object(flight_json):
+    flight_dict_keys = [
+        "icao",
+        "callsign",
+        "origin",
+        "time_pos",
+        "last_contact",
+        "longitude",
+        "latitude",
+        "geo_alt",
+        "on_ground",
+        "velocity",
+        "heading",
+        "v_rate",
+        "sensors",
+        "baro_alt",
+        "squawk",
+        "spi",
+        "pos_src",
+        "category"
+        ]
+    
     with open("nearby flights.json") as flight_file:
         data = json.load(flight_file)
         flights = data["states"]
-    return
+
+
+
+    all_flights = dict()
+    flight_list = []
+
+    for flight in flights:
+        flight_dict = dict(zip(flight_dict_keys, flight))
+        all_flights.update({flight_dict["icao"]: flight_dict})
+        flight_obj = Flight(flight_dict)
+
+        if not flight_obj.on_ground:
+            flight_list.append(flight_obj)
+
+    return flight_list
+
 
 if __name__ == "__main__":
     main()
+    curses.endwin()
 
