@@ -7,24 +7,28 @@ import json
 import ctypes
 import curses
 from Flight import Flight
+from time import sleep
 
 def main():
     # opensky url
     # https://opensky-network.org/api
 
-    print("This will be a Plane Visualizer :D !")
     load_dotenv()
 
     location = input("Enter the location you want to use visplane for: ")
     long, lat = get_coordinates_of_place(location)
     min_lat, min_long, max_lat, max_long = calculate_bounding_box(long, lat)
+    bounding_box = (min_lat, min_long, max_lat, max_long)
 
-    response = make_opensky_query(min_lat, min_long, max_lat, max_long)
 
-    user32 = ctypes.windll.user32
-    user32.SetProcessDPIAware()
-    screen_width, screen_height = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-    display_flights(response.json, screen_width, screen_height, (long, lat))
+    while True:
+        response = make_opensky_query(min_lat, min_long, max_lat, max_long)
+
+        user32 = ctypes.windll.user32
+        user32.SetProcessDPIAware()
+        screen_width, screen_height = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        display_flights(response.json, screen_width, screen_height, (long, lat), bounding_box)
+        sleep(5)
 
     return
 
@@ -101,7 +105,6 @@ def make_opensky_query(min_lat, min_long, max_lat, max_long):
     VP_CLIENT_SECRET = os.getenv("VISPLANE_CLIENT_SECRET")
     response = requests.get(request_url, auth=(VP_CLIENT_ID, VP_CLIENT_SECRET))
 
-    print(request_url)
     if response.status_code != 200:
         print("Something Went Wrong with the request")
 
@@ -109,49 +112,39 @@ def make_opensky_query(min_lat, min_long, max_lat, max_long):
 
     return response
 
-def convert_lat_long_to_screen_coordinates(long, lat, screen_y, screen_x):
+def convert_lat_long_to_screen_coordinates(long, lat, screen_y, screen_x, bounding_box):
     # long => -180 to 180
     # lat => -90 to 90
-    normalized_long = ((long - -180) / (180 - -180)) * (screen_x) + 0
-    print(long, normalized_long)
-    normalized_lat = ((lat - -90) / (90 - -90)) * (screen_y) + 0
-    print(lat, normalized_lat)
+    min_lat, min_long, max_lat, max_long = bounding_box
+    normalized_long = ((long - min_long) / (max_long - min_long)) * (screen_x) + 0
+    normalized_lat = ((lat - min_lat) / (max_lat - min_lat)) * (screen_y) + 0
     return (normalized_long, normalized_lat)
 
 
-def display_flights(flight_info_json, width, height, center):
-    print(width, height)
-    print(center)
+def display_flights(flight_info_json, width, height, center, bounding_box):
     # 1920x1080 resolution
     # 50km bounding box
     stdscr = curses.initscr()
     screen_y, screen_x = stdscr.getmaxyx()
-    print(f"Max Possible: {screen_x, screen_y}")
 
-    center_long, center_lat = convert_lat_long_to_screen_coordinates(center[0], center[1], screen_y, screen_x)
+    center_long, center_lat = convert_lat_long_to_screen_coordinates(center[0], center[1], screen_y, screen_x, bounding_box)
 
-    print(f"Normalized: {center_long, center_lat}")
     flight_list = load_flight_object("nearby flights.json")
     
     co_ords = dict()
     for flight in flight_list:
 
-        co_ords[flight.icao] = convert_lat_long_to_screen_coordinates(flight.longitude, flight.latitude, screen_y, screen_x)
-        print(co_ords)
-
-    while True:
-    
-        stdscr.clear()
-
-        stdscr.addch(int(center_lat), int(center_long), "o")
-
-        for key in co_ords.keys():
-            stdscr.addch(int(co_ords[key][1]), int(co_ords[key][0]), "x") 
-        if stdscr.getch() == ord("q"): # press q to exit
-            break
+        co_ords[flight.icao] = convert_lat_long_to_screen_coordinates(flight.longitude, flight.latitude, screen_y, screen_x, bounding_box)
 
     
-    curses.endwin()
+    stdscr.erase()
+
+    stdscr.addch(int(center_lat), int(center_long), "o")
+
+    for key in co_ords.keys():
+        stdscr.addch(int(co_ords[key][1]), int(co_ords[key][0]), "x") 
+
+    stdscr.refresh() 
     
     return
 
